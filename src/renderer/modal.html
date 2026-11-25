@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'">
+  <title>Account</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      background: #111b21;
+      color: #e9edef;
+      padding: 22px;
+      user-select: none;
+    }
+    h1 { font-size: 16px; margin-bottom: 14px; }
+    input {
+      width: 100%;
+      padding: 9px 12px;
+      border-radius: 8px;
+      border: 1px solid #2a3942;
+      background: #0b141a;
+      color: #e9edef;
+      font-size: 14px;
+      outline: none;
+    }
+    input:focus { border-color: #00a884; }
+    .actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      margin-top: 16px;
+    }
+    button {
+      padding: 7px 16px;
+      border-radius: 8px;
+      border: none;
+      font-size: 13px;
+      cursor: pointer;
+    }
+    #cancel { background: #202c33; color: #e9edef; }
+    #ok { background: #00a884; color: #041512; font-weight: 700; }
+    #ok:disabled { opacity: 0.5; cursor: default; }
+  </style>
+</head>
+<body>
+  <h1 id="title">Add account</h1>
+  <input id="name" type="text" placeholder="Account name" maxlength="40" autofocus>
+  <div class="actions">
+    <button id="cancel">Cancel</button>
+    <button id="ok" disabled>OK</button>
+  </div>
+  <script src="modal.js"></script>
+</body>
+</html>

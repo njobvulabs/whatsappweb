@@ -1,0 +1,32 @@
+appId: com.whatsappweb.WhatsAppWeb
+productName: WhatsApp Web
+executableName: whatsappweb
+directories:
+  buildResources: assets
+  output: dist
+files:
+  - src/**/*
+  - assets/icon.png
+  - assets/icon-32.png
+  - package.json
+  - "!assets/icon.svg"
+linux:
+  target:
+    - AppImage
+  category: Network
+  icon: assets/icon.png
+  maintainer: njobvu
+  synopsis: Multi-account WhatsApp Web desktop client
+  description: Run multiple WhatsApp Web accounts side by side with isolated sessions.
+  syncDesktopName: true
+  protocols:
+    - name: WhatsApp
+      schemes:
+        - whatsapp
+  artifactName: WhatsApp-Web-${version}.${ext}
+# GitHub repo used by electron-updater for releases.
+publish:
+  provider: github
+  owner: njobvulabs
+  repo: whatsappweb
+npmRebuild: false

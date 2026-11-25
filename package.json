@@ -1,0 +1,24 @@
+{
+  "name": "whatsappweb",
+  "productName": "WhatsApp Web",
+  "version": "0.2.0",
+  "description": "Multi-account WhatsApp Web desktop client",
+  "desktopName": "com.whatsappweb.WhatsAppWeb.desktop",
+  "main": "src/main/main.js",
+  "author": "Njobvu",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron .",
+    "build": "node scripts/gen-icon.js && electron-builder --linux AppImage",
+    "build:dir": "node scripts/gen-icon.js && electron-builder --linux dir",
+    "install:integration": "bash scripts/install-integration.sh"
+  },
+  "devDependencies": {
+    "electron": "^45.5.0",
+    "electron-builder": "^26.18.0"
+  },
+  "dependencies": {
+    "electron-updater": "^6.8.11"
+  }
+}

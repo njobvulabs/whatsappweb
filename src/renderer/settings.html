@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'">
+  <title>Settings</title>
+  <link rel="stylesheet" href="settings.css">
+</head>
+<body>
+  <aside id="sidebar">
+    <div class="logo">WhatsApp Web</div>
+    <nav>
+      <button class="nav active" data-section="general">General</button>
+      <button class="nav" data-section="appearance">Appearance</button>
+      <button class="nav" data-section="downloads">Downloads</button>
+      <button class="nav" data-section="privacy">Privacy</button>
+      <button class="nav" data-section="storage">Storage</button>
+      <button class="nav" data-section="about">About</button>
+    </nav>
+  </aside>
+
+  <main id="main">
+    <!-- General -->
+    <section id="general" class="section active">
+      <h2>General</h2>
+      <label class="row"><span>Launch at login</span><input type="checkbox" id="launchAtLogin"></label>
+      <label class="row"><span>Start minimized to tray</span><input type="checkbox" id="startMinimized"></label>
+      <label class="row"><span>Minimize to tray on close</span><input type="checkbox" id="closeToTray"></label>
+      <div class="row">
+        <span>Download folder</span>
+        <div class="inline">
+          <input type="text" id="downloadDir" placeholder="Ask each time">
+          <button id="browseDir">Browse…</button>
+        </div>
+      </div>
+      <div class="row">
+        <span>Global show/hide hotkey</span>
+        <input type="text" id="globalHotkey" placeholder="e.g. CommandOrControl+Shift+Space">
+      </div>
+      <div class="row">
+        <span>User agent</span>
+        <input type="text" id="ua" placeholder="Auto (current Chrome)">
+      </div>
+      <p class="hint">UA changes apply to new requests immediately; service workers need an app restart.</p>
+    </section>
+
+    <!-- Appearance -->
+    <section id="appearance" class="section">
+      <h2>Appearance</h2>
+      <div class="row">
+        <span>Theme</span>
+        <select id="theme">
+          <option value="system">System</option>
+          <option value="light">Light</option>
+          <option value="dark">Dark</option>
+        </select>
+      </div>
+    </section>
+
+    <!-- Downloads -->
+    <section id="downloads" class="section">
+      <h2>Downloads</h2>
+      <div id="downloadsList"><p class="hint">No recent downloads yet.</p></div>
+    </section>
+
+    <!-- Privacy -->
+    <section id="privacy" class="section">
+      <h2>Privacy</h2>
+      <label class="row"><span>Block screenshots / capture</span><input type="checkbox" id="screenshotBlock"></label>
+      <p class="hint">May also block screen sharing of this window. Turn off if you share your screen.</p>
+      <label class="row"><span>Spell checker</span><input type="checkbox" id="spellcheck"></label>
+      <div class="row">
+        <span>Spell checker language</span>
+        <select id="spellcheckLanguage"></select>
+      </div>
+    </section>
+
+    <!-- Storage -->
+    <section id="storage" class="section">
+      <h2>Storage</h2>
+      <p class="hint">"Clear all data" signs the account out and deletes its session. "Remove account" deletes the account and all of its local data.</p>
+      <div id="storageList"></div>
+    </section>
+
+    <!-- About -->
+    <section id="about" class="section">
+      <h2>About</h2>
+      <div class="about-row"><span>Version</span><b id="version"></b></div>
+      <div class="about-row"><span>User agent</span><b id="aboutUa"></b></div>
+      <div class="row">
+        <span>Updates</span>
+        <div class="inline">
+          <button id="updateCheckBtn" class="ghost">Check for updates</button>
+          <button id="updateInstallBtn" class="ghost hidden">Restart to install</button>
+        </div>
+      </div>
+      <p id="updateStatus" class="hint"></p>
+      <p class="hint">Multi-account WhatsApp Web client. Sessions are isolated per account.</p>
+    </section>
+  </main>
+  <script src="settings.js"></script>
+</body>
+</html>
