@@ -28,6 +28,10 @@ function createTray(ctx) {
 
   ctx.onTrayStateChanged = () => {
     const accounts = ctx.store().accounts;
+    const total = accounts.reduce((sum, account) => sum + account.unread, 0);
+    tray.setToolTip(
+      total ? `WhatsApp Web — ${total} unread` : 'WhatsApp Web'
+    );
     const menu = [
       { label: 'Show / Hide', click: () => ctx.showWindow() },
       { type: 'separator' },

@@ -11,5 +11,12 @@ contextBridge.exposeInMainWorld('api', {
   reloadAccount: (id) => ipcRenderer.send('shell:reloadAccount', id),
   openDevTools: (id) => ipcRenderer.send('shell:openDevTools', id),
   showTabMenu: (id) => ipcRenderer.send('shell:showTabMenu', id),
+  closeAccount: (id) => ipcRenderer.send('shell:closeAccount', id),
+  reorderAccounts: (ids) => ipcRenderer.send('shell:reorderAccounts', ids),
+  setColor: (id, color) => ipcRenderer.send('shell:setColor', id, color),
   openSettings: () => ipcRenderer.send('shell:openSettings'),
+  onQuickSwitcher: (callback) =>
+    ipcRenderer.on('shell:showQuickSwitcher', () => callback()),
+  onToast: (callback) =>
+    ipcRenderer.on('shell:toast', (_event, payload) => callback(payload)),
 });

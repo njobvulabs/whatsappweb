@@ -1,6 +1,7 @@
 const path = require('node:path');
 const fs = require('node:fs');
 const { BrowserWindow, nativeTheme, shell } = require('electron');
+const { normalizeAccelerator } = require('./hotkeys');
 
 const DEFAULT_LANG = 'en-US';
 
@@ -39,6 +40,7 @@ function formatBytes(bytes) {
 
 function registerSettings(ctx) {
   let settingsWin = null;
+  let lastError = '';
 
   function open() {
     if (settingsWin && !settingsWin.isDestroyed()) {
@@ -89,6 +91,8 @@ function registerSettings(ctx) {
       version: ctx.app.getVersion(),
       downloads: ctx.downloads.list,
       update: ctx.getUpdateState(),
+      hotkeyStatus: ctx.getHotkeyStatus(),
+      error: lastError,
     };
   }
 
@@ -138,8 +142,32 @@ function registerSettings(ctx) {
       ctx.config.downloadDir = value || '';
     },
     globalHotkey(value) {
-      ctx.config.globalHotkey = value || '';
+      if (value === '') {
+        lastError = '';
+        ctx.config.globalHotkey = '';
+        ctx.rebindHotkey();
+        return;
+      }
+      const result = normalizeAccelerator(value);
+      if (!result.ok) {
+        lastError = result.error;
+        return;
+      }
+      lastError = '';
+      ctx.config.globalHotkey = result.accelerator;
       ctx.rebindHotkey();
+    },
+    accountSwitcherEnabled(value) {
+      ctx.config.accountSwitcherEnabled = !!value;
+      ctx.rebindHotkey();
+    },
+    autoCheckUpdates(value) {
+      const wasEnabled = !!ctx.config.autoCheckUpdates;
+      ctx.config.autoCheckUpdates = !!value;
+      ctx.configureUpdateChecks?.();
+      if (!wasEnabled && ctx.config.autoCheckUpdates) {
+        ctx.checkForUpdates?.();
+      }
     },
     spellcheck(value) {
       ctx.config.spellcheck = !!value;
@@ -164,10 +192,12 @@ function registerSettings(ctx) {
   };
 
   ctx.setSetting = (key, value) => {
+    if (key !== 'globalHotkey') lastError = '';
     if (typeof apply[key] === 'function') apply[key](value);
     ctx.saveConfig();
     ctx.broadcast();
     pushToSettingsWindow();
+    return getSettings();
   };
 
   nativeTheme.on('updated', () => {

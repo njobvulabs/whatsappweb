@@ -21,8 +21,19 @@ const { registerShortcuts } = require('./shortcuts');
 const { DownloadManager } = require('./downloads');
 const { registerSettings } = require('./settings');
 const { currentUA } = require('./ua');
+const { normalizeAccelerator } = require('./hotkeys');
+const { extractWhatsappUrl, buildSendUrl } = require('./url-router');
 
 const APP_NAME = 'WhatsApp Web';
+const ACCOUNT_COLORS = [
+  { label: 'Default', value: '' },
+  { label: 'Green', value: '#00a884' },
+  { label: 'Bright green', value: '#25d366' },
+  { label: 'Red', value: '#f15c6d' },
+  { label: 'Orange', value: '#ffa726' },
+  { label: 'Purple', value: '#5c6bc0' },
+  { label: 'Cyan', value: '#26c6da' },
+];
 const ICON_PATH = path.join(__dirname, '..', '..', 'assets', 'icon.png');
 app.setPath('userData', path.join(app.getPath('appData'), 'Njobvu WhatsApp'));
 
@@ -46,7 +57,9 @@ const DEFAULT_CONFIG = {
   downloadDir: '',
   globalHotkey: 'CommandOrControl+Shift+Space',
   hotkeyEnabled: false,
+  accountSwitcherEnabled: true,
   accountHotkeysEnabled: false,
+  autoCheckUpdates: false,
   spellcheck: true,
   spellcheckLanguage: 'en-US',
   screenshotBlock: false,
@@ -186,8 +199,25 @@ function rebindHotkey() {
   } catch {
     config.hotkeyEnabled = false;
   }
-  config.accountHotkeysEnabled = registerAccountHotkeys();
+  config.accountHotkeysEnabled = config.accountSwitcherEnabled
+    ? registerAccountHotkeys()
+    : false;
   saveConfig();
+}
+
+function getHotkeyStatus() {
+  return {
+    showHide: !config.globalHotkey
+      ? 'disabled'
+      : config.hotkeyEnabled
+        ? 'active'
+        : 'failed',
+    accountSwitch: !config.accountSwitcherEnabled
+      ? 'disabled'
+      : config.accountHotkeysEnabled
+        ? 'active'
+        : 'failed',
+  };
 }
 
 function toggleWindow() {
@@ -253,6 +283,7 @@ async function removeAccount(id) {
     else manager.activeId = null;
   }
   broadcast();
+  ctx.toast(`Removed "${account.name}"`);
 }
 
 async function requestAddAccount() {
@@ -262,6 +293,7 @@ async function requestAddAccount() {
   ctx.loading[account.id] = true;
   manager.add(account);
   select(account.id);
+  ctx.toast(`Added "${account.name}"`, 'success');
 }
 
 function closeActiveAccount() {
@@ -279,6 +311,7 @@ async function renameAccount(id) {
   if (name) {
     store.rename(id, name);
     broadcast();
+    ctx.toast(`Renamed to "${name}"`, 'success');
   }
   return name;
 }
@@ -348,43 +381,38 @@ function openSettings() {
 
 /* ---------------- whatsapp:// links ---------------- */
 
-function extractWhatsappUrl(argv) {
-  const pattern =
-    /^(whatsapp:|wa\.me\/|https:\/\/wa\.me\/|https:\/\/api\.whatsapp\.com\/)/;
-  for (const arg of argv) {
-    if (pattern.test(arg)) return arg;
-  }
-  return null;
+function loadSendUrl(accountId, target) {
+  if (accountId && accountId !== manager.activeId) select(accountId);
+  const view = manager.activeView;
+  if (view) view.webContents.loadURL(target);
 }
 
 function openWhatsappUrl(raw) {
-  let url;
-  try {
-    url = new URL(raw);
-  } catch {
+  const target = buildSendUrl(raw);
+  if (!target) return;
+  const accounts = store.accounts;
+  if (!accounts.length) return;
+  ctx.showWindow();
+
+  if (accounts.length === 1 || !win || win.isDestroyed()) {
+    loadSendUrl(accounts[0].id, target);
     return;
   }
-  let phone = '';
-  let text = '';
-  if (url.protocol === 'whatsapp:') {
-    phone = url.searchParams.get('phone') || '';
-    text = url.searchParams.get('text') || '';
-  } else if (url.hostname === 'wa.me' || url.hostname === 'api.whatsapp.com') {
-    phone = url.pathname.replace(/^\//, '').split('?')[0];
-    text = url.searchParams.get('text') || '';
+
+  const template = accounts.map((account) => ({
+    label: account.name,
+    click: () => loadSendUrl(account.id, target),
+  }));
+  if (manager.activeId) {
+    template.push(
+      { type: 'separator' },
+      {
+        label: `Active: ${store.get(manager.activeId)?.name || 'account'}`,
+        click: () => loadSendUrl(manager.activeId, target),
+      }
+    );
   }
-  const target = `https://web.whatsapp.com/send?phone=${encodeURIComponent(
-    phone
-  )}${text ? `&text=${encodeURIComponent(text)}` : ''}`;
-  let view = manager.activeView;
-  if (!view) {
-    const first = store.accounts[0];
-    if (first) {
-      manager.select(first.id);
-      view = manager.activeView;
-    }
-  }
-  if (view) view.webContents.loadURL(target);
+  Menu.buildFromTemplate(template).popup({ window: win });
 }
 
 /* ---------------- notifications ---------------- */
@@ -423,6 +451,16 @@ function onDownload(account, item) {
 /* ---------------- auto-update ---------------- */
 
 let updateState = { status: 'idle', version: '', downloaded: false };
+let updateTimer = null;
+
+function configureUpdateChecks() {
+  clearInterval(updateTimer);
+  updateTimer = null;
+  if (!app.isPackaged || !config.autoCheckUpdates) return;
+  updateTimer = setInterval(() => {
+    if (ctx.checkForUpdates) ctx.checkForUpdates();
+  }, 60 * 60 * 1000);
+}
 
 function pushUpdateState() {
   if (settings) settings.pushUpdateState(updateState);
@@ -464,6 +502,7 @@ function setupAutoUpdater() {
       downloaded: true,
     };
     pushUpdateState();
+    ctx.toast?.(`Update ${updateState.version} is ready to install`, 'success');
   });
   autoUpdater.on('error', (err) => {
     updateState = {
@@ -682,6 +721,7 @@ if (!gotLock) {
 
   app.on('before-quit', () => {
     ctx.isQuitting = true;
+    clearInterval(updateTimer);
     try {
       globalShortcut.unregisterAll();
     } catch {
@@ -717,6 +757,12 @@ if (!gotLock) {
     ctx.selectAccountByIndex = selectAccountByIndex;
     ctx.toggleMuteActive = toggleMuteActive;
     ctx.openDevToolsActive = openDevToolsActive;
+    ctx.reloadActive = () => {
+      if (manager.activeId) reloadAccount(manager.activeId);
+    };
+    ctx.toggleFullScreen = () => {
+      if (win && !win.isDestroyed()) win.setFullScreen(!win.isFullScreen());
+    };
     ctx.openSettings = openSettings;
     ctx.zoomActive = zoomActive;
     ctx.zoomResetActive = zoomResetActive;
@@ -732,6 +778,19 @@ if (!gotLock) {
     ctx.saveConfig = saveConfig;
     ctx.toggleWindow = toggleWindow;
     ctx.rebindHotkey = rebindHotkey;
+    ctx.getHotkeyStatus = getHotkeyStatus;
+    ctx.configureUpdateChecks = configureUpdateChecks;
+    ctx.toast = (message, kind = 'info') => {
+      if (win && !win.isDestroyed()) {
+        win.webContents.send('shell:toast', { message, kind });
+      }
+    };
+    ctx.openQuickSwitcher = () => {
+      ctx.showWindow();
+      if (win && !win.isDestroyed()) {
+        win.webContents.send('shell:showQuickSwitcher');
+      }
+    };
     ctx.applySpellcheckAll = applySpellcheckAll;
     ctx.applyUA = () => {
       activeUA = currentUA(config.ua);
@@ -753,36 +812,9 @@ if (!gotLock) {
     ctx.isQuitting = false;
 
     setupAutoUpdater();
+    configureUpdateChecks();
 
-    Menu.setApplicationMenu(
-      Menu.buildFromTemplate([
-        {
-          label: 'WhatsApp',
-          submenu: [
-            { label: 'Settings…', accelerator: 'CmdOrCtrl+,', click: openSettings },
-            { type: 'separator' },
-            { role: 'quit' },
-          ],
-        },
-        {
-          label: 'Edit',
-          submenu: [
-            { role: 'cut' },
-            { role: 'copy' },
-            { role: 'paste' },
-            { role: 'selectAll' },
-          ],
-        },
-        {
-          label: 'View',
-          submenu: [
-            { role: 'reload' },
-            { role: 'toggleDevTools' },
-            { role: 'togglefullscreen' },
-          ],
-        },
-      ])
-    );
+    Menu.setApplicationMenu(null);
 
     settings = registerSettings(ctx);
     createTray(ctx);
@@ -808,9 +840,31 @@ if (!gotLock) {
           label: account.muted ? 'Unmute' : 'Mute',
           click: () => toggleMute(id),
         },
+        {
+          label: 'Color',
+          submenu: ACCOUNT_COLORS.map((color) => ({
+            label: color.label,
+            click: () => {
+              store.setColor(id, color.value);
+              broadcast();
+            },
+          })),
+        },
+        { label: 'Remove', click: () => removeAccount(id) },
         { label: 'Open DevTools', click: () => openDevToolsFor(id) },
       ]);
       menu.popup({ window: winRef });
+    });
+    ipcMain.on('shell:closeAccount', (_event, id) => {
+      removeAccount(id);
+    });
+    ipcMain.on('shell:reorderAccounts', (_event, ids) => {
+      if (!Array.isArray(ids)) return;
+      store.reorder(ids);
+      broadcast();
+    });
+    ipcMain.on('shell:setColor', (_event, id, color) => {
+      if (store.setColor(id, color)) broadcast();
     });
 
     /* settings IPC */
@@ -835,6 +889,7 @@ if (!gotLock) {
       const account = store.get(accountId);
       if (!account) return;
       await manager.get(accountId)?.webContents.session.clearCache();
+      ctx.toast(`Cleared cache for "${account.name}"`, 'success');
     });
     ipcMain.handle('settings:clearData', async (_event, accountId) => {
       const account = store.get(accountId);
@@ -845,6 +900,7 @@ if (!gotLock) {
         await Promise.allSettled([ses.clearStorageData(), ses.clearCache()]);
         view.webContents.reload();
       }
+      ctx.toast(`Cleared data for "${account.name}"`, 'success');
     });
     ipcMain.handle('settings:removeAccount', async (_event, id) => {
       await removeAccount(id);

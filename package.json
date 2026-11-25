@@ -12,6 +12,7 @@
     "dev": "electron .",
     "build": "node scripts/gen-icon.js && electron-builder --linux AppImage",
     "build:dir": "node scripts/gen-icon.js && electron-builder --linux dir",
+    "check": "node scripts/check.js",
     "install:integration": "bash scripts/install-integration.sh"
   },
   "devDependencies": {

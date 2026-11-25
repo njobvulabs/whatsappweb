@@ -35,11 +35,20 @@
       </div>
       <div class="row">
         <span>Global show/hide hotkey</span>
-        <input type="text" id="globalHotkey" placeholder="e.g. CommandOrControl+Shift+Space">
+        <div class="inline">
+          <input type="text" id="globalHotkey" readonly placeholder="Not set">
+          <button id="captureHotkey" class="ghost">Change…</button>
+          <button id="clearHotkey" class="ghost">Clear</button>
+        </div>
       </div>
+      <p class="hint" id="hotkeyHint"></p>
+      <label class="row"><span>Global account switching (Alt+1–9)</span><input type="checkbox" id="accountSwitcherEnabled"></label>
       <div class="row">
         <span>User agent</span>
-        <input type="text" id="ua" placeholder="Auto (current Chrome)">
+        <div class="inline">
+          <input type="text" id="ua" placeholder="Auto (current Chrome)">
+          <button id="resetUa" class="ghost">Reset</button>
+        </div>
       </div>
       <p class="hint">UA changes apply to new requests immediately; service workers need an app restart.</p>
     </section>
@@ -87,6 +96,7 @@
       <h2>About</h2>
       <div class="about-row"><span>Version</span><b id="version"></b></div>
       <div class="about-row"><span>User agent</span><b id="aboutUa"></b></div>
+      <label class="row"><span>Check for updates hourly</span><input type="checkbox" id="autoCheckUpdates"></label>
       <div class="row">
         <span>Updates</span>
         <div class="inline">

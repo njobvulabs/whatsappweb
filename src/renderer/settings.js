@@ -12,7 +12,41 @@ const BIND = [
   ['closeToTray', 'closeToTray', 'change'],
   ['screenshotBlock', 'screenshotBlock', 'change'],
   ['spellcheck', 'spellcheck', 'change'],
+  ['accountSwitcherEnabled', 'accountSwitcherEnabled', 'change'],
+  ['autoCheckUpdates', 'autoCheckUpdates', 'change'],
 ];
+
+let capturingHotkey = false;
+
+function acceleratorFromKeyboard(event) {
+  const parts = [];
+  if (event.ctrlKey || event.metaKey) parts.push('CommandOrControl');
+  if (event.altKey) parts.push('Alt');
+  if (event.shiftKey) parts.push('Shift');
+  if (['Control', 'Alt', 'Shift', 'Meta'].includes(event.key)) return null;
+  let key = event.key;
+  if (key === ' ') key = 'Space';
+  else if (key === '+') key = 'Plus';
+  else if (key === '-') key = 'Minus';
+  else if (key.length === 1) key = key.toUpperCase();
+  parts.push(key);
+  return parts.join('+');
+}
+
+function stopCapture() {
+  capturingHotkey = false;
+  const button = $('captureHotkey');
+  button.classList.remove('capturing');
+  button.textContent = 'Change…';
+}
+
+async function applySet(key, value) {
+  const next = await window.api.set(key, value);
+  if (next) {
+    state = next;
+    renderSettings();
+  }
+}
 
 function bindControls() {
   for (const [id, key, event] of BIND) {
@@ -24,10 +58,29 @@ function bindControls() {
   $('spellcheckLanguage').addEventListener('change', () =>
     window.api.set('spellcheckLanguage', $('spellcheckLanguage').value)
   );
-  $('globalHotkey').addEventListener('change', () =>
-    window.api.set('globalHotkey', $('globalHotkey').value)
-  );
+  $('captureHotkey').addEventListener('click', () => {
+    capturingHotkey = true;
+    $('captureHotkey').classList.add('capturing');
+    $('captureHotkey').textContent = 'Press keys…';
+    renderHotkeyHint();
+  });
+  $('clearHotkey').addEventListener('click', () => applySet('globalHotkey', ''));
+  document.addEventListener('keydown', (event) => {
+    if (!capturingHotkey) return;
+    event.preventDefault();
+    event.stopPropagation();
+    if (event.key === 'Escape') {
+      stopCapture();
+      renderHotkeyHint();
+      return;
+    }
+    const accelerator = acceleratorFromKeyboard(event);
+    if (!accelerator) return;
+    stopCapture();
+    applySet('globalHotkey', accelerator);
+  });
   $('ua').addEventListener('change', () => window.api.set('ua', $('ua').value));
+  $('resetUa').addEventListener('click', () => applySet('ua', ''));
   $('downloadDir').addEventListener('change', () =>
     window.api.set('downloadDir', $('downloadDir').value)
   );
@@ -42,6 +95,40 @@ function bindControls() {
   $('updateInstallBtn').addEventListener('click', () => window.api.installUpdate());
 }
 
+function renderHotkeyHint() {
+  const el = $('hotkeyHint');
+  el.className = 'hint';
+  if (!state) return;
+  if (state.error) {
+    el.textContent = state.error;
+    el.classList.add('error');
+    return;
+  }
+  if (capturingHotkey) {
+    el.textContent = 'Press a key combination now. Esc cancels.';
+    return;
+  }
+  const status = state.hotkeyStatus || {};
+  const show =
+    status.showHide === 'active'
+      ? 'Show/hide shortcut active.'
+      : status.showHide === 'failed'
+        ? 'Show/hide shortcut could not be registered.'
+        : 'Show/hide shortcut disabled.';
+  const accounts =
+    status.accountSwitch === 'active'
+      ? 'Account shortcuts active.'
+      : status.accountSwitch === 'failed'
+        ? 'Account shortcuts unavailable on this desktop.'
+        : 'Account shortcuts disabled.';
+  el.textContent = `${show} ${accounts}`;
+  if (status.showHide === 'active' && status.accountSwitch === 'active') {
+    el.classList.add('active');
+  } else if (status.showHide === 'failed' || status.accountSwitch === 'failed') {
+    el.classList.add('failed');
+  }
+}
+
 function renderSettings() {
   if (!state) return;
   const c = state.config;
@@ -54,7 +141,10 @@ function renderSettings() {
   $('theme').value = c.theme || 'system';
   $('downloadDir').value = c.downloadDir || '';
   $('globalHotkey').value = c.globalHotkey || '';
+  $('accountSwitcherEnabled').checked = c.accountSwitcherEnabled !== false;
+  $('autoCheckUpdates').checked = !!c.autoCheckUpdates;
   $('ua').value = c.ua || '';
+  renderHotkeyHint();
 
   const langSel = $('spellcheckLanguage');
   const current = c.spellcheckLanguage || 'en-US';

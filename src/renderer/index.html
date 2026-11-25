@@ -37,10 +37,17 @@
       <p>Run multiple WhatsApp Web accounts side by side. Each account keeps its own isolated session.</p>
       <button id="empty-add">Add account</button>
       <div class="hint">
-        Ctrl+T add &middot; Ctrl+W close &middot; Ctrl+Tab switch &middot; Ctrl+1&ndash;9 select &middot; Ctrl+Shift+M mute &middot; Alt+1&ndash;9 global switch
+        Ctrl+T add &middot; Ctrl+W close &middot; Ctrl+Shift+K switcher &middot; Ctrl+Tab switch &middot; Ctrl+1&ndash;9 select &middot; Ctrl+Shift+M mute &middot; Alt+1&ndash;9 global switch
       </div>
     </div>
   </main>
+  <div id="quickSwitcher" class="overlay hidden">
+    <div class="palette">
+      <input id="quickFilter" type="text" placeholder="Switch to account…" autofocus>
+      <div id="quickList"></div>
+    </div>
+  </div>
+  <div id="toasts" aria-live="polite"></div>
   <script src="tabs.js"></script>
 </body>
 </html>

@@ -29,7 +29,12 @@ Built with Electron.
 - **Global hotkey** — show/hide the window from anywhere (default
   `Ctrl+Shift+Space`, configurable)
 - **Global account switching** — `Alt+1` … `Alt+9` jump to account N from
-  anywhere and show/focus the window
+  anywhere and show/focus the window (can be disabled in Settings)
+- **Quick switcher** — `Ctrl+Shift+K` opens a filterable account palette
+- **Hotkey control** — capture the show/hide shortcut in Settings and see whether
+  each binding registered successfully
+- **Link chooser** — pick which account handles a `whatsapp://` link when you have
+  more than one
 - **Zoom** — per-account zoom factor (`Ctrl+=` / `Ctrl+-` / `Ctrl+0`)
 - **Auto-update** — checks GitHub Releases for updates (see *Releases & updates*)
 
@@ -74,6 +79,7 @@ bash uninstall.sh --all     # also removes dist/, node_modules/ and the legacy d
 
 ```bash
 npm start                 # run from source (dev)
+npm run check             # node --check over all JS sources
 npm run build             # rebuild the AppImage -> dist/WhatsApp-Web-*.AppImage
 bash setup.sh             # system deps + deps + build + integration in one go
 bash uninstall.sh         # remove launcher + whatsapp:// handler (+ --all for artifacts/data)
@@ -95,8 +101,8 @@ After the build you can also run the packaged app directly:
 - the default handler for the `x-scheme-handler/whatsapp` MIME type
 
 Once registered, clicking a `whatsapp://` link in your browser opens WhatsApp
-Web (it reuses the running instance and routes the link to the active
-account). Verify with:
+Web (it reuses the running instance; with multiple accounts you can pick the
+destination). Verify with:
 
 ```bash
 xdg-mime query default x-scheme-handler/whatsapp
@@ -121,18 +127,16 @@ publish:
 To enable auto-update for real:
 
 1. Create the repository on GitHub (or change `owner`/`repo` to your own).
-2. `git init` and add a `.gitignore` containing `node_modules/` and `dist/`.
-3. Publish a release:
+2. Push a tag like `v0.3.0`. `.github/workflows/release.yml` builds the AppImage
+   and publishes it with the built-in `GITHUB_TOKEN`.
+3. To publish manually instead:
 
    ```bash
    GH_TOKEN=ghp_... npx electron-builder --linux AppImage --publish always
    ```
 
-   or create the release manually in the GitHub UI and upload
-   `dist/WhatsApp-Web-<version>.AppImage` plus `dist/latest-linux.yml`
-   (electron-builder's `--publish always` uploads these automatically).
-
-4. In the app: Settings → About → **Check for updates**.
+4. In the app: Settings → About → **Check for updates**, or enable
+   **Check for updates hourly** (opt-in, packaged builds only).
 
 If a release repo isn't configured, the app reports the check gracefully and
 never blocks startup.
@@ -144,26 +148,33 @@ never blocks startup.
 | `Ctrl+T`            | Add account              |
 | `Ctrl+W`            | Close (remove) active    |
 | `Ctrl+Tab`          | Switch account           |
+| `Ctrl+Shift+K`      | Open quick switcher      |
 | `Ctrl+1` … `Ctrl+9` | Jump to account N        |
 | `Alt+1` … `Alt+9`   | Jump to account N globally (shows window) |
 | `Ctrl+Shift+M`      | Mute / unmute active     |
 | `Ctrl+,`            | Settings                 |
 | `Ctrl+=` / `Ctrl+-` | Zoom in / out            |
 | `Ctrl+0`            | Reset zoom               |
+| `Ctrl+R`            | Reload active account    |
+| `F11`               | Toggle fullscreen        |
 | `Ctrl+Shift+I`      | DevTools for active      |
+
+The app intentionally has no native menu bar; Alt-based global shortcuts never
+reveal one. Actions live in these shortcuts, the tab bar and the tray menu.
 
 ## Settings
 
 Open Settings (`Ctrl+,` or tray → Settings). Highlights:
 
 - **General** — launch at login, start minimized, minimize-to-tray on close,
-  download folder, global show/hide hotkey, custom user agent
+  download folder, captured global show/hide hotkey, global account switching,
+  custom user agent
 - **Appearance** — dark / light / system theme
 - **Downloads** — recent downloads with "Open" shortcut
 - **Privacy** — block screenshots, spellcheck + language
 - **Storage** — per-account "Clear cache" / "Clear all data" (signs out) and
   "Remove account" (deletes the account and its session)
-- **About** — version, user agent, **Check for updates**
+- **About** — version, user agent, **Check for updates**, opt-in hourly checks
 
 ## Data locations
 
@@ -182,6 +193,7 @@ Deleting an account removes its `accounts.json` entry and clears its partition.
 assets/                 icon sources (generated PNGs)
 scripts/
   gen-icon.js           generates assets/icon*.png + icon.svg
+  check.js              runs node --check over all JS files
   install-integration.sh  installs .desktop + whatsapp:// handler
 src/
   main/                 Electron main process
@@ -191,6 +203,8 @@ src/
     downloads.js        download manager
     settings.js         settings window + state
     shortcuts.js        in-page keyboard shortcuts
+    hotkeys.js          accelerator normalization
+    url-router.js       whatsapp:// parsing + send URL builder
     tray.js             tray icon + menu
     ua.js               user-agent builder
   preload/              contextBridge preloads (shell, settings, modal, whatsapp)
@@ -198,6 +212,8 @@ src/
 electron-builder.yml    packaging + publish config
 package.json            scripts + dependencies
 setup.sh                one-shot setup: deps + build + integration
+.github/workflows/      CI + tagged releases
+LICENSE, CHANGELOG.md, CONTRIBUTING.md
 ```
 
 ## Notes
@@ -215,3 +231,5 @@ setup.sh                one-shot setup: deps + build + integration
   silently deny binds with an unresolvable ID, and the first bind may ask for
   consent. On X11/XFCE a desktop environment may already own a combo — in that
   case `globalShortcut.register` reports failure and that key is skipped.
+  Settings → General shows the live binding status and lets you disable global
+  account switching. Settings → About has the opt-in hourly update check.

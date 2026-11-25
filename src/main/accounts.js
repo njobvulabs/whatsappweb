@@ -30,6 +30,7 @@ class AccountStore {
       unread: 0,
       muted: false,
       zoom: 1,
+      color: '',
       createdAt: Date.now(),
     };
     this.accounts.push(account);
@@ -83,12 +84,42 @@ class AccountStore {
     }
   }
 
+  setColor(id, color) {
+    const account = this.get(id);
+    if (!account || (color && !/^#[0-9a-f]{6}$/i.test(color))) return false;
+    account.color = color || '';
+    this.save();
+    return true;
+  }
+
+  reorder(ids) {
+    if (!Array.isArray(ids)) return;
+    const seen = new Set();
+    const ordered = [];
+    for (const id of ids) {
+      const account = this.get(id);
+      if (account && !seen.has(id)) {
+        seen.add(id);
+        ordered.push(account);
+      }
+    }
+    for (const account of this.accounts) {
+      if (!seen.has(account.id)) {
+        seen.add(account.id);
+        ordered.push(account);
+      }
+    }
+    this.accounts = ordered;
+    this.save();
+  }
+
   toState() {
     return this.accounts.map((a) => ({
       id: a.id,
       name: a.name,
       unread: a.unread,
       muted: a.muted,
+      color: a.color || '',
     }));
   }
 }

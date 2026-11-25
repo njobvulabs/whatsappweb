@@ -13,6 +13,9 @@ function registerShortcuts(ctx, wc) {
     } else if (ctrl && key === 'tab') {
       event.preventDefault();
       ctx.switchAccount(input.shift ? -1 : 1);
+    } else if (ctrl && input.shift && key === 'k') {
+      event.preventDefault();
+      ctx.openQuickSwitcher();
     } else if (ctrl && /^[1-9]$/.test(key)) {
       event.preventDefault();
       ctx.selectAccountByIndex(parseInt(key, 10) - 1);
@@ -31,6 +34,12 @@ function registerShortcuts(ctx, wc) {
     } else if (ctrl && key === '0') {
       event.preventDefault();
       ctx.zoomResetActive();
+    } else if (ctrl && key === 'r') {
+      event.preventDefault();
+      ctx.reloadActive?.();
+    } else if (key === 'f11') {
+      event.preventDefault();
+      ctx.toggleFullScreen?.();
     } else if ((ctrl && input.shift && key === 'i') || key === 'f12') {
       event.preventDefault();
       ctx.openDevToolsActive();
